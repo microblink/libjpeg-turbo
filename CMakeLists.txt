@@ -166,6 +166,13 @@ boolean_number(WITH_SIMD)
 option(WITH_TURBOJPEG "Include the TurboJPEG API library and associated test programs" TRUE)
 boolean_number(WITH_TURBOJPEG)
 
+# MB patch begin
+option( BUILD_EXECUTABLES "Build executables" TRUE )
+boolean_number( BUILD_EXECUTABLES )
+option( WITH_TESTS "Build and register tests" TRUE )
+boolean_number( WITH_TESTS )
+# MB patch end
+
 macro(report_option var desc)
   if(${var})
     message(STATUS "${desc} enabled (${var} = ${${var}})")
@@ -610,17 +617,19 @@ if(WITH_TURBOJPEG)
         LINK_FLAGS "${TJMAPFLAG}${TJMAPFILE}")
     endif()
 
-    add_executable(tjunittest tjunittest.c tjutil.c md5/md5.c md5/md5hl.c)
-    target_link_libraries(tjunittest turbojpeg)
+    if( BUILD_EXECUTABLES ) # MB patch
+        add_executable(tjunittest tjunittest.c tjutil.c md5/md5.c md5/md5hl.c)
+        target_link_libraries(tjunittest turbojpeg)
 
-    add_executable(tjbench tjbench.c tjutil.c)
-    target_link_libraries(tjbench turbojpeg)
-    if(UNIX)
-      target_link_libraries(tjbench m)
-    endif()
+        add_executable(tjbench tjbench.c tjutil.c)
+        target_link_libraries(tjbench turbojpeg)
+        if(UNIX)
+        target_link_libraries(tjbench m)
+        endif()
 
-    add_executable(tjexample tjexample.c)
-    target_link_libraries(tjexample turbojpeg)
+        add_executable(tjexample tjexample.c)
+        target_link_libraries(tjexample turbojpeg)
+    endif() # MB patch
   endif()
 
   if(ENABLE_STATIC)
@@ -633,14 +642,16 @@ if(WITH_TURBOJPEG)
       set_target_properties(turbojpeg-static PROPERTIES OUTPUT_NAME turbojpeg)
     endif()
 
-    add_executable(tjunittest-static tjunittest.c tjutil.c md5/md5.c
-      md5/md5hl.c)
-    target_link_libraries(tjunittest-static turbojpeg-static)
+    if( BUILD_EXECUTABLES ) # MB patch
+        add_executable(tjunittest-static tjunittest.c tjutil.c md5/md5.c
+        md5/md5hl.c)
+        target_link_libraries(tjunittest-static turbojpeg-static)
 
-    add_executable(tjbench-static tjbench.c tjutil.c)
-    target_link_libraries(tjbench-static turbojpeg-static)
-    if(UNIX)
-      target_link_libraries(tjbench-static m)
+        add_executable(tjbench-static tjbench.c tjutil.c)
+        target_link_libraries(tjbench-static turbojpeg-static)
+        if(UNIX)
+        target_link_libraries(tjbench-static m)
+        endif()
     endif()
   endif()
 endif()
@@ -656,7 +667,7 @@ else()
   set(DJPEG_BMP_SOURCES wrbmp.c wrtarga.c)
 endif()
 
-if(ENABLE_STATIC)
+if(ENABLE_STATIC AND BUILD_EXECUTABLES ) # MB patch
   add_executable(cjpeg-static cjpeg.c cdjpeg.c rdgif.c rdppm.c rdswitch.c
     ${CJPEG_BMP_SOURCES})
   set_property(TARGET cjpeg-static PROPERTY COMPILE_FLAGS ${COMPILE_FLAGS})
@@ -672,14 +683,17 @@ if(ENABLE_STATIC)
   set_property(TARGET jpegtran-static PROPERTY COMPILE_FLAGS "${USE_SETMODE}")
 endif()
 
-add_executable(rdjpgcom rdjpgcom.c)
+if ( BUILD_EXECUTABLES ) # MB patch
+    add_executable(rdjpgcom rdjpgcom.c)
 
-add_executable(wrjpgcom wrjpgcom.c)
+    add_executable(wrjpgcom wrjpgcom.c)
+endif()
 
 
 ###############################################################################
 # TESTS
 ###############################################################################
+if ( WITH_TESTS ) # MB patch
 
 add_subdirectory(md5)
 
@@ -1408,6 +1422,7 @@ if(WITH_TURBOJPEG)
   endif()
 endif()
 
+endif( WITH_TESTS ) # MB patch
 
 ###############################################################################
 # INSTALLATION
@@ -1461,7 +1476,9 @@ if(ENABLE_STATIC)
   endif()
 endif()
 
-install(TARGETS rdjpgcom wrjpgcom RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+if ( BUILD_EXECUTABLES ) # MB patch
+    install(TARGETS rdjpgcom wrjpgcom RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+endif()
 
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/README.ijg
   ${CMAKE_CURRENT_SOURCE_DIR}/README.md ${CMAKE_CURRENT_SOURCE_DIR}/example.txt
