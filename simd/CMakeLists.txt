@@ -238,10 +238,9 @@ else()
 endif()
 
 separate_arguments(CMAKE_ASM_FLAGS_SEP UNIX_COMMAND "${CMAKE_ASM_FLAGS}")
-
 execute_process(COMMAND ${CMAKE_ASM_COMPILER} ${CMAKE_ASM_FLAGS_SEP}
     -x assembler-with-cpp -c ${CMAKE_CURRENT_BINARY_DIR}/gastest.S
-  RESULT_VARIABLE RESULT OUTPUT_VARIABLE OUTPUT ERROR_VARIABLE ERROR)
+  RESULT_VARIABLE RESULT OUTPUT_VARIABLE OUTPUT ERROR_VARIABLE ERROR WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} ) # MB patch
 if(NOT RESULT EQUAL 0)
   message(STATUS "GAS appears to be broken.  Trying gas-preprocessor.pl ...")
   execute_process(COMMAND gas-preprocessor.pl ${CMAKE_ASM_COMPILER}

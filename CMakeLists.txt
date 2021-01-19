@@ -359,8 +359,13 @@ include(CheckCSourceCompiles)
 include(CheckIncludeFiles)
 include(CheckTypeSize)
 
-check_type_size("size_t" SIZE_T)
-check_type_size("unsigned long" UNSIGNED_LONG)
+if ( NOT EMSCRIPTEN ) # MB patch
+    check_type_size("size_t" SIZE_T)
+    check_type_size("unsigned long" UNSIGNED_LONG)
+else()
+    set( SIZE_T 4 )
+    set( UNSIGNED_LONG 4 )
+endif()
 
 if(SIZE_T EQUAL UNSIGNED_LONG)
   check_c_source_compiles("int main(int argc, char **argv) { unsigned long a = argc;  return __builtin_ctzl(a); }"
@@ -385,9 +390,14 @@ if(UNIX)
     set(NEED_BSD_STRINGS 1)
   endif()
 
-  # Check for types
-  check_type_size("unsigned char" UNSIGNED_CHAR)
-  check_type_size("unsigned short" UNSIGNED_SHORT)
+    if ( NOT EMSCRIPTEN ) # MB patch
+        # Check for types
+        check_type_size("unsigned char" UNSIGNED_CHAR)
+        check_type_size("unsigned short" UNSIGNED_SHORT)
+    else()
+        set( UNSIGNED_CHAR  1 )
+        set( UNSIGNED_SHORT 2 )
+    endif()
 
   # Check for compiler features
   check_c_source_compiles("int main(void) { typedef struct undefined_structure *undef_struct_ptr;  undef_struct_ptr ptr = 0;  return ptr != 0; }"
