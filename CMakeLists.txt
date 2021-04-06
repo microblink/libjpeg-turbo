@@ -399,6 +399,8 @@ if(UNIX)
     else()
         set( UNSIGNED_CHAR  1 )
         set( UNSIGNED_SHORT 2 )
+        set( HAVE_UNSIGNED_CHAR  1 )
+        set( HAVE_UNSIGNED_SHORT 1 )
     endif()
 
   # Check for compiler features
