@@ -554,7 +554,9 @@ if(NEON_INTRINSICS OR BITS EQUAL 32)
     arm/jdcolor-neon.c arm/jfdctint-neon.c)
 endif()
 if(BITS EQUAL 32)
-  set_source_files_properties(${SIMD_SOURCES} COMPILE_FLAGS -mfpu=neon)
+    set_source_files_properties(${SIMD_SOURCES} PROPERTIES COMPILE_FLAGS "-mfpu=neon -marm -O3") # MB patch
+else()
+    set_source_files_properties(${SIMD_SOURCES} PROPERTIES COMPILE_FLAGS "-O3") # MB patch
 endif()
 if(NOT NEON_INTRINSICS)
   enable_language(ASM)
