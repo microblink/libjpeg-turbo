@@ -21,8 +21,8 @@ jobs:
       - name: Set up build
         run: |
           mkdir -p $HOME/src/ljt.nightly
-          docker pull dcommander/buildljt:$BRANCH
-          git clone --depth=1 https://github.com/libjpeg-turbo/buildscripts.git -b $BRANCH $HOME/src/buildscripts
+          docker pull dcommander/buildljt:main
+          git clone --depth=1 https://github.com/libjpeg-turbo/buildscripts.git -b main $HOME/src/buildscripts
           mkdir $HOME/rpmkeys
           wget --no-check-certificate "http://www.libjpeg-turbo.org/key/LJTPR-GPG-KEY" -O $HOME/rpmkeys/LJTPR-GPG-KEY
       - name: Configure GPG signing
@@ -36,7 +36,7 @@ jobs:
           echo "GPG_KEY_PASS=${{secrets.GPG_KEY_PASS}}" >>$HOME/src/buildscripts/gpgsign
       - name: Build
         run: |
-          docker run -v $HOME/src/ljt.nightly:/root/src/ljt.nightly -v $HOME/src/buildscripts:/root/src/buildscripts -v $GITHUB_WORKSPACE:/root/src/libjpeg-turbo -v $HOME/.gnupg:/root/.gnupg -v $HOME/rpmkeys:/rpmkeys -t dcommander/buildljt:$BRANCH bash -c "rpm --import /rpmkeys/LJTPR-GPG-KEY && ~/src/buildscripts/buildljt -d /root/src/libjpeg-turbo -v"
+          docker run -v $HOME/src/ljt.nightly:/root/src/ljt.nightly -v $HOME/src/buildscripts:/root/src/buildscripts -v $GITHUB_WORKSPACE:/root/src/libjpeg-turbo -v $HOME/.gnupg:/root/.gnupg -v $HOME/rpmkeys:/rpmkeys -t dcommander/buildljt:main bash -c "rpm --import /rpmkeys/LJTPR-GPG-KEY && ~/src/buildscripts/buildljt -d /root/src/libjpeg-turbo -v"
           sudo chown -R runner:runner $HOME/src/ljt.nightly
           mv $HOME/src/ljt.nightly/latest/log-${{github.job}}.txt $HOME/src/ljt.nightly/latest/files/
       - name: Configure AWS
@@ -62,7 +62,7 @@ jobs:
         run: |
           brew install yasm md5sha1sum
           mkdir -p $HOME/src/ljt.nightly
-          git clone --depth=1 https://github.com/libjpeg-turbo/buildscripts.git -b $BRANCH $HOME/src/buildscripts
+          git clone --depth=1 https://github.com/libjpeg-turbo/buildscripts.git -b main $HOME/src/buildscripts
       - name: Configure GPG signing
         if: ${{github.event_name != 'pull_request'}}
         run: |
