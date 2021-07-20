@@ -1458,7 +1458,7 @@ endif( WITH_TESTS ) # MB patch
 ###############################################################################
 # INSTALLATION
 ###############################################################################
-
+if ( NOT SKIP_INSTALL ) # MB patch
 set(EXE ${CMAKE_EXECUTABLE_SUFFIX})
 
 if(WITH_TURBOJPEG)
@@ -1558,3 +1558,4 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmakescripts/cmake_uninstall.cmake.i
   "cmake_uninstall.cmake" IMMEDIATE @ONLY)
 
 add_custom_target(uninstall COMMAND ${CMAKE_COMMAND} -P cmake_uninstall.cmake)
+endif() # SKIP_INSTALL MB patch
