@@ -181,35 +181,6 @@ if ( MB_XCODE_USE_INTEL_SIMD )
     endif()
 endif( MB_XCODE_USE_INTEL_SIMD )
 
-# Arm7 sources need to be compiled with gas-preprocessor.pl (unlike arm64 sources, which can be compiled with xcode)
-set( need_arm7 OFF )
-if ( MB_IOS_SDK STREQUAL "device" )
-    set( arm_asm_source   arm/jsimd_neon.S )
-
-    set( gas_preprocessor ${CMAKE_CURRENT_LIST_DIR}/gas-preprocessor.pl )
-    enable_language( ASM )
-
-    set( OBJDIR "${CMAKE_CURRENT_BINARY_DIR}/arm/objs" )
-    file( MAKE_DIRECTORY ${OBJDIR} )
-    set( libsimd_arm_output "${CMAKE_CURRENT_BINARY_DIR}/arm/libsimdobjects.a" )
-
-    separate_arguments( CMAKE_ASM_FLAGS_SEP UNIX_COMMAND "${CMAKE_ASM_FLAGS}" )
-
-    add_custom_command(
-        OUTPUT
-            ${libsimd_arm_output}
-        DEPENDS
-            ${arm_asm_source}
-        COMMAND
-            ${gas_preprocessor} ${CMAKE_ASM_COMPILER} ${CMAKE_ASM_FLAGS_SEP} -arch armv7 -fembed-bitcode -x assembler-with-cpp -c ${CMAKE_CURRENT_LIST_DIR}/${arm_asm_source} -o ${OBJDIR}/jsimd_neon.S.o
-        COMMAND
-            libtool -static -arch_only armv7 ${OBJDIR}/jsimd_neon.S.o -o ${libsimd_arm_output}
-    )
-
-    add_custom_target( Armv7Assemble DEPENDS ${libsimd_arm_output} )
-    set( need_arm7 ON )
-endif()
-
 # Now create fat binary out of SIMD objects
 set( need_simd_objects_lib OFF )
 unset( lipo_flags )
@@ -234,13 +205,6 @@ if ( MB_IOS_SDK STREQUAL "maccatalyst" )
     set( intel_x64_sources ../jsimd_none.c )
 endif()
 
-if ( need_arm7 )
-    set( need_simd_objects_lib ON )
-    set( arm_sources arm/jsimd.c )
-    list( APPEND lipo_flags -arch armv7 ${libsimd_arm_output} )
-    list( APPEND lipo_deps Armv7Assemble )
-endif()
-
 if ( need_simd_objects_lib )
     if ( CMAKE_ARCHIVE_OUTPUT_DIRECTORY )
         set( simd_objs_lib ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/$CONFIGURATION/libsimdobjects.a )
@@ -258,39 +222,61 @@ if ( need_simd_objects_lib )
     add_custom_target( FatAssemblyLibs DEPENDS ${simd_objs_lib} )
 endif()
 
-set( arm64_asm_sources arm64/jsimd_neon.S )
-
-set( arm64_sources ${arm64_asm_sources} arm64/jsimd.c )
-
-set_source_files_properties( ${arm64_asm_sources}
-    PROPERTIES
-        XCODE_EXPLICIT_FILE_TYPE sourcecode.asm
-        LANGUAGE                 ASM
+set( arm_common_sources
+    arm/jcgray-neon.c
+    arm/jcphuff-neon.c
+    arm/jcsample-neon.c
+    arm/jdmerge-neon.c
+    arm/jdsample-neon.c
+    arm/jfdctfst-neon.c
+    arm/jidctred-neon.c
+    arm/jquanti-neon.c
+    arm/jccolor-neon.c
+    arm/jidctint-neon.c
+    arm/jidctfst-neon.c
+    arm/jdcolor-neon.c
+    arm/jfdctint-neon.c
 )
+set( arm64_sources arm/aarch64/jchuff-neon.c arm/aarch64/jsimd.c )
+set( arm7_sources  arm/aarch32/jchuff-neon.c arm/aarch32/jsimd.c )
 
 if ( NOT MB_XCODE_USE_INTEL_SIMD )
     # use C implementation for Intel
     set( intel_generic_sources ../jsimd_none.c )
 endif()
 
-add_library( simd STATIC ${arm64_sources} ${arm_sources} ${intel_x64_sources} ${intel_x86_sources} ${intel_generic_sources} )
+set( HAVE_VLD1_S16_X3 ON )
+set( HAVE_VLD1_U16_X2 ON )
+set( HAVE_VLD1Q_U8_X4 ON )
+configure_file( arm/neon-compat.h.in arm/neon-compat.h @ONLY )
+include_directories( ${CMAKE_CURRENT_BINARY_DIR}/arm )
+
+add_library( simd STATIC ${arm_common_sources} ${arm64_sources} ${arm_sources} ${intel_x64_sources} ${intel_x86_sources} ${intel_generic_sources} )
+
+target_compile_options( simd PRIVATE -O3 )
+target_compile_definitions( simd INTERFACE NEON_INTRINSICS )
 
 if ( need_simd_objects_lib )
     add_dependencies( simd FatAssemblyLibs )
     target_link_libraries( simd PUBLIC ${simd_objs_lib} )
 endif()
 
-string( REPLACE ";" " " ARM64_SRCS   "${arm64_sources}"     )
-string( REPLACE ";" " " ARM_SRCS     "${arm_sources}"       )
-string( REPLACE ";" " " INTEL64_SRCS "${intel_x64_sources}" )
-string( REPLACE ";" " " INTEL32_SRCS "${intel_x86_sources}" )
+string( REPLACE ";" " " ARM64_SRCS      "${arm64_sources}"      )
+string( REPLACE ";" " " ARM_SRCS        "${arm_sources}"        )
+string( REPLACE ";" " " ARM_COMMON_SRCS "${arm_common_sources}" )
+string( REPLACE ";" " " INTEL64_SRCS    "${intel_x64_sources}"  )
+string( REPLACE ";" " " INTEL32_SRCS    "${intel_x86_sources}"  )
 
 set_target_properties( simd PROPERTIES
-    XCODE_ATTRIBUTE_EXCLUDED_SOURCE_FILE_NAMES[arch=x86_64] "${ARM64_SRCS} ${ARM_SRCS} ${INTEL32_SRCS}"
-    XCODE_ATTRIBUTE_EXCLUDED_SOURCE_FILE_NAMES[arch=i386]   "${ARM64_SRCS} ${ARM_SRCS} ${INTEL64_SRCS}"
+    XCODE_ATTRIBUTE_EXCLUDED_SOURCE_FILE_NAMES[arch=x86_64] "${ARM_COMMON_SRCS} ${ARM64_SRCS} ${ARM_SRCS} ${INTEL32_SRCS}"
+    XCODE_ATTRIBUTE_EXCLUDED_SOURCE_FILE_NAMES[arch=i386]   "${ARM_COMMON_SRCS} ${ARM64_SRCS} ${ARM_SRCS} ${INTEL64_SRCS}"
     XCODE_ATTRIBUTE_EXCLUDED_SOURCE_FILE_NAMES[arch=armv7]  "${INTEL64_SRCS} ${INTEL32_SRCS} ${intel_generic_sources} ${ARM64_SRCS}"
     XCODE_ATTRIBUTE_EXCLUDED_SOURCE_FILE_NAMES[arch=armv7s] "${INTEL64_SRCS} ${INTEL32_SRCS} ${intel_generic_sources} ${ARM64_SRCS}"
     XCODE_ATTRIBUTE_EXCLUDED_SOURCE_FILE_NAMES[arch=arm64]  "${INTEL64_SRCS} ${INTEL32_SRCS} ${intel_generic_sources} ${ARM_SRCS}"
+
+    XCODE_ATTRIBUTE_GCC_PREPROCESSOR_DEFINITIONS[arch=armv7]  "$(GCC_PREPROCESSOR_DEFINITIONS) NEON_INTRINSICS=1"
+    XCODE_ATTRIBUTE_GCC_PREPROCESSOR_DEFINITIONS[arch=armv7s] "$(GCC_PREPROCESSOR_DEFINITIONS) NEON_INTRINSICS=1"
+    XCODE_ATTRIBUTE_GCC_PREPROCESSOR_DEFINITIONS[arch=arm64]  "$(GCC_PREPROCESSOR_DEFINITIONS) NEON_INTRINSICS=1"
 )
 
 if( CMAKE_POSITION_INDEPENDENT_CODE OR ENABLE_SHARED )
