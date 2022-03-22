@@ -407,12 +407,15 @@ include(CheckCSourceCompiles)
 include(CheckIncludeFiles)
 include(CheckTypeSize)
 
-if ( NOT EMSCRIPTEN ) # MB patch
-    check_type_size("size_t" SIZE_T)
-    check_type_size("unsigned long" UNSIGNED_LONG)
-else()
+if ( EMSCRIPTEN ) # MB patch
     set( SIZE_T 4 )
     set( UNSIGNED_LONG 4 )
+elseif ( CMAKE_GENERATOR STREQUAL "Xcode" ) # this detection does not work correctly with xcode, but we only support 64-bit Apple platforms (iOS and MacOS)
+    set( SIZE_T 8 )
+    set( UNSIGNED_LONG 8 )
+else()
+    check_type_size("size_t" SIZE_T)
+    check_type_size("unsigned long" UNSIGNED_LONG)
 endif()
 
 if(SIZE_T EQUAL UNSIGNED_LONG)
