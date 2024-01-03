@@ -55,7 +55,7 @@ set(LIBJPEG_TURBO_VERSION_NUMBER ${VERSION_MAJOR}${VERSION_MINOR}${VERSION_REVIS
 # ExternalProject_Add() or make downstream modifications to the libjpeg-turbo
 # build system to suit their specific needs.  Please do not file bug reports,
 # feature requests, or pull requests regarding this.
-if(NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+if(FALSE AND NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR) # MB patch - we maintain this and are responsible for all changes
   message(FATAL_ERROR "The libjpeg-turbo build system cannot be integrated into another build system using add_subdirectory().  Use ExternalProject_Add() instead.")
 endif()
 
@@ -651,12 +651,6 @@ if(ENABLE_SHARED)
 endif()
 
 if(ENABLE_STATIC)
-if( CMAKE_GENERATOR STREQUAL "Xcode" ) # MB patch begin
-    add_library( jpeg-static STATIC ${JPEG_SOURCES} ${JPEG12_SOURCES} ${JPEG16_SOURCES} )
-    target_link_libraries( jpeg-static PUBLIC simd )
-    set_source_files_properties( ${JPEG12_SOURCES} PROPERTY COMPILE_DEFINITIONS "BITS_IN_JSAMPLE=12" )
-    set_source_files_properties( ${JPEG16_SOURCES} PROPERTY COMPILE_DEFINITIONS "BITS_IN_JSAMPLE=16" )
-else() # MB patch
   # Compile a separate version of these source files with 12-bit and 16-bit
   # data precision.
   add_library(jpeg12-static OBJECT ${JPEG12_SOURCES})
@@ -665,6 +659,11 @@ else() # MB patch
   add_library(jpeg16-static OBJECT ${JPEG16_SOURCES})
   set_property(TARGET jpeg16-static PROPERTY COMPILE_FLAGS
     "-DBITS_IN_JSAMPLE=16")
+if( CMAKE_GENERATOR STREQUAL "Xcode" ) # MB patch begin
+    add_library( jpeg-static STATIC ${JPEG_SOURCES}
+      $<TARGET_OBJECTS:jpeg12-static> $<TARGET_OBJECTS:jpeg16-static> )
+    target_link_libraries( jpeg-static PUBLIC simd )
+else() # MB patch
   add_library(jpeg-static STATIC ${JPEG_SOURCES} ${SIMD_TARGET_OBJECTS}
     ${SIMD_OBJS} $<TARGET_OBJECTS:jpeg12-static>
     $<TARGET_OBJECTS:jpeg16-static>)
