@@ -162,7 +162,7 @@ if ( MB_XCODE_USE_INTEL_SIMD )
     # For Mac Catalyst use the C fallback implementation as object files produced by NASM cannot be linked
     # into a Mac Catalyst binary (link error: "building for Mac Catalyst, but linking in object file built for ,")
     set( need_x64 OFF )
-    if ( NOT DEFINED MB_IOS_SDK OR MB_IOS_SDK STREQUAL "simulator" )
+    if ( NOT DEFINED MB_IOS_SDK OR MB_IOS_SDK STREQUAL "simulator" OR MB_IOS_SDK STREQUAL "maccatalyst" )
         unset( intel_x64_objs )
         create_simd_objects( intel_x64_objs x86_64 "${intel_x64_asm_sources}" )
 
@@ -198,11 +198,6 @@ if ( need_x64 )
     set( intel_x64_sources x86_64/jsimd.c )
     list( APPEND lipo_flags -arch x86_64 ${intel_x64_objs} )
     list( APPEND lipo_deps Intel64Assemble )
-endif()
-
-if ( MB_IOS_SDK STREQUAL "maccatalyst" )
-    # need Intel, but use C implementation
-    set( intel_x64_sources ../jsimd_none.c )
 endif()
 
 if ( need_simd_objects_lib )
